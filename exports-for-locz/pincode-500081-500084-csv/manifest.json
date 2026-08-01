@@ -1,0 +1,90 @@
+{
+  "export_id": "4a719156-5d7d-42eb-8d08-be16ad5eae02",
+  "schema_version": "locz-export-v1",
+  "created_at": "2026-08-01T14:43:11.326290+00:00",
+  "created_by": "export_operator",
+  "format": "csv",
+  "filters": {
+    "pincode": [
+      "500081",
+      "500084"
+    ],
+    "tier": [
+      "CONTACTABLE",
+      "LOCATABLE"
+    ],
+    "format": "csv",
+    "by": "export_operator"
+  },
+  "record_count": 727,
+  "excluded_count": 0,
+  "exclusion_reasons": {},
+  "source_summary": [
+    {
+      "source": "OpenStreetMap — India extract (Geofabrik)",
+      "licence": "ODbL-1.0",
+      "attribution": "© OpenStreetMap contributors",
+      "records": 727
+    }
+  ],
+  "licence_summary": [
+    "ODbL-1.0"
+  ],
+  "attribution_requirements": [
+    "© OpenStreetMap contributors"
+  ],
+  "pincodes": [
+    "500081",
+    "500084"
+  ],
+  "categories": [
+    "agricultural-supplies",
+    "automobile-services",
+    "bakeries-and-sweets",
+    "beauty-and-wellness",
+    "car-repair",
+    "clothing-stores",
+    "colleges",
+    "computer-and-laptop-stores",
+    "courier-and-parcel-services",
+    "electronics-stores",
+    "event-services",
+    "footwear-stores",
+    "furniture-stores",
+    "gift-stores",
+    "grocery-and-kirana",
+    "hardware-stores",
+    "home-services",
+    "hospitals-and-clinics",
+    "hotels-and-accommodation",
+    "jewellery-stores",
+    "medical-stores-and-pharmacies",
+    "mobile-stores",
+    "other-local-businesses",
+    "pet-stores-and-pet-services",
+    "petrol-stations",
+    "printing-and-stationery",
+    "professional-services",
+    "restaurants-and-food",
+    "salons-and-spas",
+    "schools",
+    "tailoring-and-boutiques",
+    "tyre-and-battery-stores"
+  ],
+  "defaults_applied": {
+    "claim_status": "unclaimed",
+    "verification_status": "unverified",
+    "publication_type": "directory_listing",
+    "products_disabled": true,
+    "offers_disabled": true,
+    "reviews_disabled": true,
+    "owner_contact_unconfirmed": true
+  },
+  "notes": [
+    "Directory listings. Not owner-verified. Nothing inferred or fabricated.",
+    "Absent fields are null and must stay absent in LocZ.",
+    "location_accuracy governs display: 'locality' records must not show a distance."
+  ],
+  "data_file": "data.csv",
+  "sha256": "0ab2a0bf31cf9524f176395b5647e32a52b58e73f2484f98cabec52275ed7fca"
+}

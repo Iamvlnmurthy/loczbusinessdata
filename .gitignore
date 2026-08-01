@@ -1,5 +1,6 @@
 # Data. Multi-GB and reproducible from source — never commit.
 var/
+!exports-for-locz/
 *.pbf
 *.parquet
 *.jsonl

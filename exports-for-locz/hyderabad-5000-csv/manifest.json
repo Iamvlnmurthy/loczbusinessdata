@@ -1,0 +1,109 @@
+{
+  "export_id": "d6c83079-2f59-48ad-8eb5-c48401eee653",
+  "schema_version": "locz-export-v1",
+  "created_at": "2026-08-01T17:39:02.278306+00:00",
+  "created_by": "export_operator",
+  "format": "csv",
+  "filters": {
+    "district": "Hyderabad",
+    "tier": [
+      "CONTACTABLE",
+      "LOCATABLE"
+    ],
+    "format": "csv",
+    "limit": 5000,
+    "by": "export_operator"
+  },
+  "record_count": 5000,
+  "excluded_count": 19135,
+  "exclusion_reasons": {
+    "unverified_centroid": 19135
+  },
+  "source_summary": [
+    {
+      "source": "Overture Maps — Places (India)",
+      "licence": "CDLA-Permissive-2.0",
+      "attribution": "© Overture Maps Foundation",
+      "records": 4715
+    },
+    {
+      "source": "OpenStreetMap — India extract (Geofabrik)",
+      "licence": "ODbL-1.0",
+      "attribution": "© OpenStreetMap contributors",
+      "records": 285
+    }
+  ],
+  "licence_summary": [
+    "CDLA-Permissive-2.0",
+    "ODbL-1.0"
+  ],
+  "attribution_requirements": [
+    "© OpenStreetMap contributors",
+    "© Overture Maps Foundation"
+  ],
+  "pincodes": [
+    "500002",
+    "500003"
+  ],
+  "categories": [
+    "agricultural-supplies",
+    "automobile-services",
+    "bakeries-and-sweets",
+    "beauty-and-wellness",
+    "bike-repair",
+    "car-repair",
+    "cleaning-services",
+    "clothing-stores",
+    "colleges",
+    "computer-and-laptop-stores",
+    "courier-and-parcel-services",
+    "education-and-training",
+    "electrical-services",
+    "electrical-stores",
+    "electronics-stores",
+    "event-services",
+    "footwear-stores",
+    "furniture-stores",
+    "gift-stores",
+    "grocery-and-kirana",
+    "hardware-stores",
+    "home-services",
+    "hospitals-and-clinics",
+    "hotels-and-accommodation",
+    "jewellery-stores",
+    "local-manufacturers",
+    "medical-stores-and-pharmacies",
+    "mobile-stores",
+    "other-local-businesses",
+    "pet-stores-and-pet-services",
+    "petrol-stations",
+    "printing-and-stationery",
+    "professional-services",
+    "property-services",
+    "repair-services",
+    "restaurants-and-food",
+    "salons-and-spas",
+    "schools",
+    "tailoring-and-boutiques",
+    "travel-services",
+    "tuition-and-coaching",
+    "tyre-and-battery-stores",
+    "wholesale-businesses"
+  ],
+  "defaults_applied": {
+    "claim_status": "unclaimed",
+    "verification_status": "unverified",
+    "publication_type": "directory_listing",
+    "products_disabled": true,
+    "offers_disabled": true,
+    "reviews_disabled": true,
+    "owner_contact_unconfirmed": true
+  },
+  "notes": [
+    "Directory listings. Not owner-verified. Nothing inferred or fabricated.",
+    "Absent fields are null and must stay absent in LocZ.",
+    "location_accuracy governs display: 'locality' records must not show a distance."
+  ],
+  "data_file": "data.csv",
+  "sha256": "ead2a0bed04ce3018baa15c554a247b45e025ff1b58d61cd553260dd8004c53c"
+}

@@ -1,0 +1,125 @@
+{
+  "export_id": "e46e3c76-8f98-4706-bead-f5409eff9ce3",
+  "schema_version": "locz-export-v1",
+  "created_at": "2026-08-01T17:39:27.665119+00:00",
+  "created_by": "export_operator",
+  "format": "csv",
+  "filters": {
+    "district": "Warangal",
+    "tier": [
+      "CONTACTABLE",
+      "LOCATABLE"
+    ],
+    "format": "csv",
+    "limit": 5000,
+    "by": "export_operator"
+  },
+  "record_count": 5000,
+  "excluded_count": 659,
+  "exclusion_reasons": {
+    "unverified_centroid": 659
+  },
+  "source_summary": [
+    {
+      "source": "Overture Maps — Places (India)",
+      "licence": "CDLA-Permissive-2.0",
+      "attribution": "© Overture Maps Foundation",
+      "records": 3412
+    },
+    {
+      "source": "OpenStreetMap — India extract (Geofabrik)",
+      "licence": "ODbL-1.0",
+      "attribution": "© OpenStreetMap contributors",
+      "records": 1588
+    }
+  ],
+  "licence_summary": [
+    "CDLA-Permissive-2.0",
+    "ODbL-1.0"
+  ],
+  "attribution_requirements": [
+    "© OpenStreetMap contributors",
+    "© Overture Maps Foundation"
+  ],
+  "pincodes": [
+    "506001",
+    "506002",
+    "506003",
+    "506005",
+    "506006",
+    "506013",
+    "506015",
+    "506101",
+    "506102",
+    "506104",
+    "506105",
+    "506112",
+    "506122",
+    "506132",
+    "506134",
+    "506135",
+    "506142"
+  ],
+  "categories": [
+    "agricultural-supplies",
+    "automobile-services",
+    "bakeries-and-sweets",
+    "beauty-and-wellness",
+    "bike-repair",
+    "car-repair",
+    "cleaning-services",
+    "clothing-stores",
+    "colleges",
+    "computer-and-laptop-stores",
+    "courier-and-parcel-services",
+    "education-and-training",
+    "electrical-services",
+    "electrical-stores",
+    "electronics-stores",
+    "event-services",
+    "footwear-stores",
+    "furniture-stores",
+    "gift-stores",
+    "grocery-and-kirana",
+    "hardware-stores",
+    "home-services",
+    "hospitals-and-clinics",
+    "hotels-and-accommodation",
+    "jewellery-stores",
+    "local-manufacturers",
+    "medical-stores-and-pharmacies",
+    "mobile-stores",
+    "other-local-businesses",
+    "pet-stores-and-pet-services",
+    "petrol-stations",
+    "plumbing-services",
+    "printing-and-stationery",
+    "professional-services",
+    "property-services",
+    "repair-services",
+    "restaurants-and-food",
+    "salons-and-spas",
+    "schools",
+    "tailoring-and-boutiques",
+    "travel-services",
+    "tuition-and-coaching",
+    "tyre-and-battery-stores",
+    "wholesale-businesses"
+  ],
+  "defaults_applied": {
+    "claim_status": "unclaimed",
+    "verification_status": "unverified",
+    "publication_type": "directory_listing",
+    "products_disabled": true,
+    "offers_disabled": true,
+    "reviews_disabled": true,
+    "owner_contact_unconfirmed": true
+  },
+  "notes": [
+    "Directory listings. Not owner-verified. Nothing inferred or fabricated.",
+    "Absent fields are null and must stay absent in LocZ.",
+    "location_accuracy governs display: 'locality' records must not show a distance."
+  ],
+  "data_file": "data.csv",
+  "sha256": "5357240ebcf6ae32607a4a533f31f0108b6580eca43e44dd46833644fcb22bfb"
+}
