@@ -3,8 +3,8 @@
 A standalone, compliance-first pipeline that builds a local-business directory for
 **LocZ** from openly licensed data — and never touches the LocZ codebase.
 
-It currently holds **3.9 million Indian businesses** resolved to pincode, category and
-locality, from OpenStreetMap (ODbL) and Overture Maps (CDLA-Permissive-2.0).
+It currently holds **~4 million Indian businesses** resolved to pincode, category and
+locality, plus **5.7 million government registry entries** used as verification evidence.
 
 ---
 
@@ -45,15 +45,22 @@ Hard-coded, enforced by `ComplianceGate`, not by convention:
 
 | | |
 |---|---:|
-| Businesses | 3,905,301 |
-| Pincodes | 19,238 (13,707 centroids corrected) |
-| Named places | 307,762 |
-| Categories | 46, with 245 source-tag mappings |
-| Phone numbers | 2.6M pre-validation |
+| Businesses | **3,995,468** |
+| Publishable phone numbers | ~2,500,000 |
+| Pincodes covered | **19,186 of 19,238** (99.7%) |
+| Pincode centroids corrected | 13,707 |
+| Named places (Area Resolver) | 307,762 |
+| Categories | 47, with 245+ source-tag mappings |
+| Registry entries (verification) | 5,736,966 |
+| EV charging stations | 1,511 |
+
+Shared corporate numbers suppressed: **119,692** — one number appeared on 20,617
+businesses. A number that is not the shop's own line is worse than no number.
 
 Sources: OpenStreetMap via Geofabrik (ODbL-1.0), Overture Maps Places
-(CDLA-Permissive-2.0 — itself aggregating Meta, Microsoft, Foursquare), GeoNames
-postal codes (CC-BY-4.0), Telangana Open Data Portal (GODL-India, verification only).
+(CDLA-Permissive-2.0 — itself aggregating Meta, Microsoft, Foursquare, AllThePlaces),
+GeoNames postal codes (CC-BY-4.0), Open Charge Map (CC-BY-4.0), Telangana Open Data
+Portal (GODL-India, verification only).
 
 ---
 
