@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LocZ Engine — Ingestion Monitor</title>
+<style>
+:root{
+  --bg:#07090b; --panel:#0d1215; --panel-2:#111a1e; --line:#1b262c; --line-2:#26343b;
+  --ink:#e6f0f3; --ink-2:#8ea3ad; --ink-3:#5a6d77;
+  --live:#22d3ee; --contact:#34d399; --locate:#fbbf24; --held:#64748b; --warn:#f87171;
+  --mono:"Cascadia Code","JetBrains Mono","SF Mono",ui-monospace,Consolas,monospace;
+  --sans:"Segoe UI Variable Display","Segoe UI",system-ui,sans-serif;
+  --r:3px;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#f4f6f7; --panel:#fff; --panel-2:#f7f9fa; --line:#dde4e8; --line-2:#c7d2d8;
+    --ink:#0d1215; --ink-2:#4b5c66; --ink-3:#7b8b95;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{height:100%}
+body{
+  background:var(--bg); color:var(--ink); font:14px/1.5 var(--sans);
+  overflow-x:hidden;
+  background-image:
+    radial-gradient(1100px 500px at 78% -12%, rgba(34,211,238,.07), transparent 62%),
+    radial-gradient(760px 420px at 6% 104%, rgba(52,211,153,.05), transparent 60%);
+}
+/* ---------- shell ---------- */
+.shell{display:grid;grid-template-columns:minmax(0,1fr);min-height:100vh}
+header{
+  position:sticky;top:0;z-index:20;display:flex;flex-wrap:wrap;gap:16px;align-items:center;
+  padding:14px 22px;border-bottom:1px solid var(--line);
+  background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);
+}
+.brand{display:flex;align-items:baseline;gap:10px;margin-right:auto}
+.brand b{font:600 15px/1 var(--sans);letter-spacing:-.02em}
+.brand span{font:500 10px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3)}
+.pulse{display:inline-flex;align-items:center;gap:7px;font:500 11px/1 var(--mono);
+  letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--held);flex:none}
+.pulse[data-live="1"] .dot{background:var(--live);animation:beat 1.8s ease-in-out infinite}
+.pulse[data-live="1"]{color:var(--live)}
+@keyframes beat{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(34,211,238,.5)}50%{opacity:.55;box-shadow:0 0 0 5px rgba(34,211,238,0)}}
+main{padding:22px;display:grid;gap:18px;max-width:1560px;width:100%;margin:0 auto}
+
+/* ---------- panels ---------- */
+
+.panel{min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+  opacity:0;transform:translateY(8px);animation:rise .5s cubic-bezier(.2,.7,.3,1) forwards}
+@keyframes rise{to{opacity:1;transform:none}}
+.panel:nth-child(1){animation-delay:.02s}.panel:nth-child(2){animation-delay:.08s}
+.panel:nth-child(3){animation-delay:.14s}.panel:nth-child(4){animation-delay:.2s}
+.panel:nth-child(5){animation-delay:.26s}
+@media (prefers-reduced-motion:reduce){
+  .panel{animation:none;opacity:1;transform:none}
+  .pulse[data-live="1"] .dot{animation:none}
+}
+.phead{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--line)}
+.phead h2{font:600 11px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2)}
+.phead .hint{margin-left:auto;font:400 11px/1 var(--mono);color:var(--ink-3)}
+
+/* ---------- metric strip ---------- */
+.metrics{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);
+  border-radius:var(--r);grid-template-columns:repeat(auto-fit,minmax(168px,1fr));overflow:hidden}
+.metric{background:var(--panel);padding:14px 16px 15px}
+.metric dt{font:500 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.metric dd{margin-top:9px;font:600 26px/1 var(--mono);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.metric .sub{display:block;margin-top:6px;font:400 11px/1.4 var(--mono);color:var(--ink-3)}
+.metric.accent dd{color:var(--live)}
+
+/* ---------- sparkline ---------- */
+.tape{padding:14px 16px 16px}
+.tape svg{width:100%;height:74px;display:block;overflow:visible}
+.tape .axis{font:400 10px var(--mono);fill:var(--ink-3)}
+
+/* ---------- tiers ---------- */
+.tiers{padding:16px}
+.tierbar{display:flex;height:26px;border-radius:2px;overflow:hidden;border:1px solid var(--line-2);background:var(--panel-2)}
+.tierbar i{display:block;transition:width .45s cubic-bezier(.2,.7,.3,1)}
+.tierbar i.c{background:var(--contact)} .tierbar i.l{background:var(--locate)} .tierbar i.h{background:var(--held)}
+.tierlist{display:grid;gap:10px;margin-top:14px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.tierrow{display:flex;align-items:baseline;gap:9px;padding:9px 11px;background:var(--panel-2);
+  border:1px solid var(--line);border-radius:2px}
+.glyph{font:600 12px/1 var(--mono);flex:none}
+.tierrow .nm{font:500 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+.tierrow .v{margin-left:auto;font:600 15px/1 var(--mono);font-variant-numeric:tabular-nums}
+.tierrow .p{font:400 11px/1 var(--mono);color:var(--ink-3);min-width:44px;text-align:right}
+.c-txt{color:var(--contact)} .l-txt{color:var(--locate)} .h-txt{color:var(--held)}
+
+/* ---------- coverage bars ---------- */
+.cov{padding:6px 16px 16px}
+.covrow{display:grid;grid-template-columns:112px 1fr 62px;gap:12px;align-items:center;
+  padding:7px 0;border-bottom:1px solid var(--line)}
+.covrow:last-child{border-bottom:0}
+.covrow .k{font:500 11px/1 var(--mono);letter-spacing:.06em;color:var(--ink-2)}
+.track{height:7px;background:var(--panel-2);border:1px solid var(--line);border-radius:2px;overflow:hidden}
+.track i{display:block;height:100%;background:linear-gradient(90deg,var(--live),var(--contact));
+  transition:width .45s cubic-bezier(.2,.7,.3,1)}
+.covrow.low .track i{background:linear-gradient(90deg,var(--warn),var(--locate))}
+.covrow .v{font:600 12px/1 var(--mono);text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+
+/* ---------- categories ---------- */
+.cats{padding:6px 16px 16px;display:grid;gap:6px}
+.catrow{display:grid;grid-template-columns:1fr 58px;gap:10px;align-items:center;
+  font:400 12px/1.6 var(--mono)}
+.catrow .bar{height:16px;background:var(--panel-2);border:1px solid var(--line);position:relative;border-radius:2px;overflow:hidden}
+.catrow .bar i{position:absolute;inset:0 auto 0 0;background:color-mix(in srgb,var(--live) 26%,transparent);border-right:1px solid var(--live)}
+.catrow .bar span{position:relative;padding:0 7px;line-height:16px;color:var(--ink);white-space:nowrap}
+.catrow .n{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink-2)}
+
+/* ---------- table ---------- */
+.controls{display:flex;flex-wrap:wrap;gap:14px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.controls>div{display:flex;flex-direction:column;flex:0 1 auto}
+.controls label{font:500 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3);display:block;margin-bottom:6px}
+input[type=search],select{
+  background:var(--panel-2);border:1px solid var(--line-2);color:var(--ink);
+  font:400 13px var(--mono);padding:8px 10px;border-radius:2px;min-height:38px;min-width:150px}
+input[type=search]:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{
+  outline:2px solid var(--live);outline-offset:2px}
+.tablewrap{overflow-x:auto;max-height:520px;overflow-y:auto}
+table{width:100%;border-collapse:collapse;font:400 12.5px/1.5 var(--mono);white-space:nowrap}
+thead th{position:sticky;top:0;background:var(--panel-2);text-align:left;
+  font:600 10px/1 var(--mono);letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);
+  padding:10px 12px;border-bottom:1px solid var(--line-2);z-index:1}
+tbody td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tbody tr:hover{background:var(--panel-2)}
+td.name{white-space:normal;max-width:260px;color:var(--ink);font-family:var(--sans);font-size:13px}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+.muted{color:var(--ink-3)}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:2px 7px;border-radius:2px;
+  font:600 10px/1.6 var(--mono);letter-spacing:.08em;border:1px solid currentColor}
+.chip.c{color:var(--contact)} .chip.l{color:var(--locate)} .chip.h{color:var(--held)}
+a.geo{color:var(--live);text-decoration:none;border-bottom:1px dotted currentColor}
+a.geo:hover{border-bottom-style:solid}
+.empty{padding:34px 16px;text-align:center;color:var(--ink-3);font:400 13px var(--mono)}
+footer{padding:14px 22px 30px;color:var(--ink-3);font:400 11px/1.6 var(--mono);max-width:1560px;margin:0 auto;width:100%}
+.grid2{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(330px,1fr))}
+.grid2>*{min-width:0}
+main>*{min-width:0}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+</style>
+</head>
+<body>
+<div class="shell">
+<header>
+  <div class="brand"><b>LocZ Engine</b><span>ingestion monitor</span></div>
+  <div class="pulse" id="pulse" data-live="0"><span class="dot"></span><span id="pulsetxt">idle</span></div>
+  <div class="pulse"><span id="uptime" class="muted">—</span></div>
+</header>
+
+<main>
+  <dl class="metrics panel" aria-label="Ingestion counters">
+    <div class="metric accent"><dt>Businesses resolved</dt><dd id="m-biz">—</dd><span class="sub">in PostGIS</span></div>
+    <div class="metric"><dt>Pincodes covered</dt><dd id="m-pins">—</dd><span class="sub">of 19,238</span></div>
+    <div class="metric"><dt>Mobile lines</dt><dd id="m-mobile">—</dd><span class="sub">reaches the owner</span></div>
+    <div class="metric"><dt>Landlines</dt><dd id="m-landline">—</dd><span class="sub">reaches the premises</span></div>
+    <div class="metric"><dt>Ingest rate</dt><dd id="m-rate">—</dd><span class="sub">rows / second</span></div>
+    <div class="metric"><dt>Building footprints</dt><dd id="m-way">—</dd><span class="sub">~5–15 m accuracy</span></div>
+  </dl>
+
+  <section class="panel">
+    <div class="phead"><h2>Ingest tape</h2><span class="hint" id="tape-hint">records/s over the last 4 minutes</span></div>
+    <div class="tape"><svg id="spark" role="img" aria-labelledby="sparkdesc" preserveAspectRatio="none"><desc id="sparkdesc">Throughput sparkline</desc></svg></div>
+  </section>
+
+  <section class="panel" id="ovpanel" hidden>
+    <div class="phead"><h2>Overture ingestion</h2><span class="hint" id="ov-overall">—</span></div>
+    <div class="cov" id="ovphases"></div>
+  </section>
+
+  <div class="grid2">
+    <section class="panel">
+      <div class="phead"><h2>Pipelines</h2><span class="hint">files being written</span></div>
+      <div class="cov" id="jobs"></div>
+    </section>
+    <section class="panel">
+      <div class="phead"><h2>Sources loaded</h2><span class="hint">rows in the canonical table</span></div>
+      <div class="cov" id="sources"></div>
+    </section>
+  </div>
+
+  <section class="panel">
+    <div class="phead"><h2>Export tiers</h2><span class="hint">pre-resolver proxy · HELD lifts to LOCATABLE once the Area Resolver assigns a pincode</span></div>
+    <div class="tiers">
+      <div class="tierbar" role="img" aria-label="Tier distribution" id="tierbar">
+        <i class="c" style="width:0"></i><i class="l" style="width:0"></i><i class="h" style="width:0"></i>
+      </div>
+      <div class="tierlist" id="tierlist"></div>
+    </div>
+  </section>
+
+  <div class="grid2">
+    <section class="panel">
+      <div class="phead"><h2>Field coverage</h2><span class="hint">share of records carrying each field</span></div>
+      <div class="cov" id="cov"></div>
+    </section>
+    <section class="panel">
+      <div class="phead"><h2>Phone lines</h2><span class="hint">validated, exclusive to one business</span></div>
+      <div class="cov" id="lines"></div>
+      <div class="phead" style="border-top:1px solid var(--line)"><h2>Phone quality</h2><span class="hint">suppressed values kept in provenance</span></div>
+      <div class="cov" id="phonestatus"></div>
+    </section>
+    <section class="panel">
+      <div class="phead"><h2>Top categories</h2><span class="hint">canonical LocZ taxonomy</span></div>
+      <div class="cats" id="cats"></div>
+    </section>
+    <section class="panel">
+      <div class="phead"><h2>Pincode assignment</h2><span class="hint">how each record was filed</span></div>
+      <div class="cov" id="methods"></div>
+    </section>
+    <section class="panel">
+      <div class="phead"><h2>Pincode centroids</h2><span class="hint">correction provenance</span></div>
+      <div class="cov" id="centroids"></div>
+    </section>
+  </div>
+
+  <section class="panel">
+    <div class="phead"><h2>Record inspector</h2><span class="hint" id="rec-hint">sampled live from the stream</span></div>
+    <div class="controls">
+      <div><label for="q">Search name / category / city</label>
+        <input type="search" id="q" placeholder="e.g. medical, hyderabad"></div>
+      <div><label for="tier">Tier</label>
+        <select id="tier"><option value="">All tiers</option>
+          <option value="CONTACTABLE">Contactable</option>
+          <option value="LOCATABLE">Locatable</option>
+          <option value="HELD">Held</option></select></div>
+    </div>
+    <div class="tablewrap">
+      <table><caption class="sr">Sampled business records</caption>
+        <thead><tr>
+          <th scope="col">Business</th><th scope="col">Category</th><th scope="col">Tier</th>
+          <th scope="col">Phone</th><th scope="col">Hours</th><th scope="col">Address</th>
+          <th scope="col">PIN</th><th scope="col">Locality</th><th scope="col">Method</th><th scope="col">Coordinates</th><th scope="col" class="num">Score</th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="empty" id="empty" hidden>No records match.</div>
+    </div>
+  </section>
+</main>
+<footer>Data © OpenStreetMap contributors, ODbL 1.0 · records are unclaimed, unverified directory listings · nothing on this page is fabricated: absent fields render as “—”.</footer>
+</div>
+
+<script>
+const $=s=>document.querySelector(s), fmt=n=>n==null?"—":n.toLocaleString("en-IN");
+const GLYPH={CONTACTABLE:"●",LOCATABLE:"◐",HELD:"○"}, KEY={CONTACTABLE:"c",LOCATABLE:"l",HELD:"h"};
+const LABEL={phone:"Phone",website:"Website",email:"Email",hours:"Opening hours",address:"Address",
+  locality:"Locality",pincode:"Pincode",brand:"Brand",building:"Footprint"};
+function bars(sel,rows,total){
+  const m=Math.max(...rows.map(r=>r[1]),1);
+  document.querySelector(sel).innerHTML=rows.map(function(r){
+    const k=r[0],v=r[1],extra=r[2];
+    const pct=total?(v/total*100):(v/m*100);
+    return '<div class="covrow"><span class="k" style="white-space:normal">'+k+'</span>'+
+      '<span class="track"><i style="width:'+Math.min(pct,100)+'%"></i></span>'+
+      '<span class="v">'+v.toLocaleString("en-IN")+(extra?" \u00b7 "+extra:"")+'</span></div>';
+  }).join("")||'<div class="empty">none</div>';}
+
+function spark(v){
+  const svg=$("#spark"), W=1000,H=74; svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+  if(!v.length){svg.innerHTML='<text class="axis" x="0" y="40">awaiting data…</text>';return;}
+  const max=Math.max(...v,1), step=W/Math.max(v.length-1,1);
+  const pts=v.map((n,i)=>[i*step,H-(n/max)*(H-14)-2]);
+  const d=pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ");
+  const area=d+` L ${W} ${H} L 0 ${H} Z`;
+  svg.innerHTML=`<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="var(--live)" stop-opacity=".34"/>
+    <stop offset="100%" stop-color="var(--live)" stop-opacity="0"/></linearGradient></defs>
+    <path d="${area}" fill="url(#g)"/><path d="${d}" fill="none" stroke="var(--live)" stroke-width="1.6"/>
+    <circle cx="${pts.at(-1)[0]}" cy="${pts.at(-1)[1]}" r="2.8" fill="var(--live)"/>
+    <text class="axis" x="0" y="10">peak ${max.toFixed(0)}/s</text>`;
+}
+
+async function tick(){
+  let s; try{ s=await (await fetch("/api/stats",{cache:"no-store"})).json(); }catch{ return; }
+  if(!s.db){$("#pulsetxt").textContent="db unreachable";$("#pulse").dataset.live="0";return;}
+  $("#m-biz").textContent=fmt(s.total);
+  $("#m-pins").textContent=fmt(s.pins);
+  const L=Object.fromEntries((s.lines||[]).map(function(r){return [r[0],r[1]]}));
+  $("#m-mobile").textContent=fmt(L.mobile||0);
+  $("#m-landline").textContent=fmt(L.landline||0);
+  $("#m-rate").textContent=fmt(Math.round(s.rate));
+  $("#m-way").textContent=fmt(s.fields.building.n);
+  const hot=(s.jobs||[]).some(function(j){return j.hot});
+  const live=s.rate>0||hot;
+  $("#pulse").dataset.live=live?"1":"0";
+  $("#pulsetxt").textContent=live?"working":"idle";
+  const u=s.uptime_s;$("#uptime").textContent=`uptime ${Math.floor(u/60)}m ${u%60}s`;
+  spark(s.spark);
+
+  const tot=Object.values(s.tiers).reduce((a,b)=>a+b,0)||1;
+  const bar=$("#tierbar").children;
+  ["CONTACTABLE","LOCATABLE","HELD"].forEach((t,i)=>bar[i].style.width=((s.tiers[t]||0)/tot*100)+"%");
+  $("#tierbar").setAttribute("aria-label",
+    ["CONTACTABLE","LOCATABLE","HELD"].map(t=>`${t} ${((s.tiers[t]||0)/tot*100).toFixed(1)}%`).join(", "));
+  $("#tierlist").innerHTML=["CONTACTABLE","LOCATABLE","HELD"].map(t=>{
+    const n=s.tiers[t]||0,k=KEY[t];
+    return `<div class="tierrow"><span class="glyph ${k}-txt" aria-hidden="true">${GLYPH[t]}</span>
+      <span class="nm">${t}</span><span class="v ${k}-txt">${fmt(n)}</span>
+      <span class="p">${(n/tot*100).toFixed(1)}%</span></div>`;}).join("");
+
+  $("#cov").innerHTML=Object.entries(s.fields).map(([k,v])=>
+    `<div class="covrow ${v.pct<15?"low":""}"><span class="k">${LABEL[k]||k}</span>
+     <span class="track"><i style="width:${Math.min(v.pct,100)}%"></i></span>
+     <span class="v">${v.pct}%</span></div>`).join("");
+  $("#jobs").innerHTML=(s.jobs||[]).map(function(j){
+    return '<div class="covrow"><span class="k" style="white-space:normal">'+j.label+'</span>'+
+      '<span class="track"><i style="width:'+(j.hot?100:0)+'%"></i></span>'+
+      '<span class="v">'+j.mb+' MB'+(j.hot?" \u25b2":"")+'</span></div>';}).join("")
+      ||'<div class="empty">no pipeline files yet</div>';
+  bars("#sources",(s.sources||[]),s.total);
+  bars("#methods",(s.methods||[]).map(function(r){return [r[0],r[1],"conf "+r[2]]}),s.total);
+  bars("#centroids",(s.centroids||[]),19238);
+  bars("#lines",(s.lines||[]).map(function(r){
+        return [r[0]==="mobile"?"Mobile (owner)":r[0]==="landline"?"Landline (premises)":r[0], r[1]];
+      }), s.fields.phone.n||1);
+  bars("#phonestatus",(s.phonestatus||[]), s.total);
+  const ov=s.overture;
+  if(ov){
+    $("#ovpanel").hidden=false;
+    $("#ov-overall").textContent="phase "+Math.round(ov.overall/25)+" of 4 · "+ov.overall+"% complete";
+    $("#ovphases").innerHTML=ov.phases.map(function(p){
+      return '<div class="covrow"><span class="k" style="white-space:normal">'+p.label+'</span>'+
+        '<span class="track"><i style="width:'+p.pct+'%"></i></span>'+
+        '<span class="v">'+p.n.toLocaleString("en-IN")+' · '+p.pct+'%</span></div>';}).join("");
+  }
+
+  const cmax=s.cats.length?s.cats[0][1]:1;
+  $("#cats").innerHTML=s.cats.map(([c,n])=>
+    `<div class="catrow"><span class="bar"><i style="width:${n/cmax*100}%"></i><span>${c}</span></span>
+     <span class="n">${fmt(n)}</span></div>`).join("");
+}
+
+async function rows(){
+  const q=$("#q").value.trim(), t=$("#tier").value;
+  let d; try{ d=await (await fetch(`/api/records?q=${encodeURIComponent(q)}&tier=${t}`)).json(); }catch{ return; }
+  if(d && d.error){$("#empty").hidden=false;$("#rows").innerHTML="";return;}
+  $("#empty").hidden=d.length>0;
+  $("#rows").innerHTML=d.map(r=>{
+    const k=KEY[r.tier], m=v=>v?String(v).replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])):'<span class="muted">—</span>';
+    return `<tr>
+      <td class="name">${m(r.name)}</td>
+      <td class="muted">${m(r.cat)}</td>
+      <td><span class="chip ${k}"><span aria-hidden="true">${GLYPH[r.tier]}</span>${r.tier}</span></td>
+      <td>${m(r.phone)}</td><td>${m(r.hours)}</td><td>${m(r.addr)}</td><td>${m(r.pin)}</td>
+      <td><a class="geo" target="_blank" rel="noopener"
+          href="https://www.openstreetmap.org/?mlat=${r.lat}&mlon=${r.lon}#map=19/${r.lat}/${r.lon}"
+          aria-label="Open ${r.name||"record"} on OpenStreetMap">${r.lat.toFixed(5)}, ${r.lon.toFixed(5)}</a></td>
+      <td class="num">${r.score}</td></tr>`;}).join("");
+}
+$("#q").addEventListener("input",()=>{clearTimeout(window._d);window._d=setTimeout(rows,220)});
+$("#tier").addEventListener("change",rows);
+tick();rows();setInterval(tick,4000);setInterval(rows,8000);
+</script>
+</body>
+</html>

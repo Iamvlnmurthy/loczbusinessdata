@@ -1,0 +1,30 @@
+# Data. Multi-GB and reproducible from source — never commit.
+var/
+*.pbf
+*.parquet
+*.jsonl
+IN.txt
+IN.zip
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Node (admin UI, later)
+node_modules/
+.next/
+
+# OS / editor
+Thumbs.db
+.DS_Store
+.vscode/
+.idea/
+*.swp
