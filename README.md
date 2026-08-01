@@ -52,7 +52,9 @@ Hard-coded, enforced by `ComplianceGate`, not by convention:
 | Named places (Area Resolver) | 307,762 |
 | Categories | 47, with 245+ source-tag mappings |
 | Registry entries (verification) | 5,736,966 |
+| Government-verified (`source_verified`) | 10,374 |
 | EV charging stations | 1,511 |
+| Compliance tests | **24 / 24 passing** |
 
 Shared corporate numbers suppressed: **119,692** — one number appeared on 20,617
 businesses. A number that is not the shop's own line is worse than no number.
@@ -61,6 +63,25 @@ Sources: OpenStreetMap via Geofabrik (ODbL-1.0), Overture Maps Places
 (CDLA-Permissive-2.0 — itself aggregating Meta, Microsoft, Foursquare, AllThePlaces),
 GeoNames postal codes (CC-BY-4.0), Open Charge Map (CC-BY-4.0), Telangana Open Data
 Portal (GODL-India, verification only).
+
+---
+
+## Security
+
+**Credentials come from `.env` only.** There is no fallback default anywhere in the
+code. An earlier revision carried a hardcoded Postgres password as a default in 22
+scripts and pushed it to this public repository; that password has been rotated and
+the defaults removed, but **it remains in git history**. Treat anything ever committed
+here as public. `.env` is gitignored — verify with `git check-ignore .env` before
+adding secrets.
+
+```bash
+cp .env.example .env     # then fill in LOCZ_DSN and any API keys
+git check-ignore .env    # must print .env
+```
+
+Scripts exit with a clear error if `LOCZ_DSN` is unset rather than silently
+connecting with a guessed password.
 
 ---
 
@@ -128,8 +149,17 @@ infrastructure/windows/  optional scheduled-task wrappers
 - **139,300 Overture records have no category** and are not imported — a business with
   no category cannot be filed under a taxonomy, and guessing from the name would be
   fabrication.
-- Telangana registries carry no coordinates. They are used for verification and gap
-  analysis, never as map pins.
+- Telangana registries carry no coordinates. They are used for verification only.
+  **Gap analysis by mandal does not work**: the register uses GHMC administrative
+  circles ("circle 10", "circle 37") while our locality field holds OSM place names.
+  The two do not align, so the join produced nonsense in both directions and the
+  table was dropped rather than left looking like fact. Fixing it needs a
+  circle-to-locality bridge that does not currently exist.
+- Registry matching is **exact normalised name within district**, not fuzzy. Trigram
+  matching spilled 15 GB of temp in seven minutes because Hyderabad district alone
+  holds 1.86M register entries. Exact equality is a hash join; it trades recall
+  (5.5% matched) for precision, which is the right trade when the output is a
+  verification claim.
 
 ---
 

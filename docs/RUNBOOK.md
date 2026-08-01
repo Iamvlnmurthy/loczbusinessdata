@@ -111,3 +111,42 @@ Output lands in `var/exports/<uuid>/` with `data.*`, `manifest.json`,
 **LocZ cannot import these yet.** See [LOCZ-MIGRATION-SPEC.md](LOCZ-MIGRATION-SPEC.md):
 `Business.ownerId` is NOT NULL, there is no pincode FK and no claim concept. Steps 1–3
 of that spec are the minimum to accept a single record.
+
+---
+
+# Session log — 2026-08-01
+
+## Bugs that were silent
+
+Every one of these was syntactically valid, raised no error, and did the wrong
+thing quietly. Listed because the pattern matters more than the individual fix:
+at 4M rows, "it ran without error" tells you almost nothing.
+
+| Bug | Symptom | Fix |
+|---|---|---|
+| Unbounded name match | pincode relocated 2,659 km | bound to 60 km + district anchor |
+| Shared phone number | one number on 177, later 20,617 businesses | suppress any number on >3 |
+| NUL bytes in Overture text | load crashed mid-stream | strip control chars at read |
+| `'pub'` inside `'public_school'` | finance companies filed as restaurants | token-aware matching |
+| Alternates outranking primary | `credit_union` lost to `public_school` | resolve primary alone first |
+| `LEFT JOIN … ON true` | cross join, 49 min without finishing | scalar EXISTS on an index |
+| `\b` in a Postgres regex | every name rule matched zero rows | `\y` — `\b` is backspace in POSIX |
+| `WHERE query LIKE '%foo%'` | `pg_cancel_backend` cancelled itself | add `pid <> pg_backend_pid()` |
+| Suppression ran before later loads | 5,314 businesses shared one number | **caught by the compliance suite** |
+| Hardcoded password default | leaked to a public repo in 22 files | env-only, no fallback; password rotated |
+
+Only one was caught by automation. The rest were found by reading output,
+watching elapsed time, or noticing a count of zero. That asymmetry is the
+argument for `tests/test_compliance.py` growing every time something slips.
+
+## Performance lessons
+
+- **Drive joins from the smaller side.** The Overture dedup ran 25 minutes from
+  the 3.5M side; the registry match ran in seconds from the 190k side.
+- **Watch for skew before choosing a join key.** Three districts hold 4.3M of
+  5.7M register rows, so "same district" was no filter at all where it mattered.
+- **Do not queue four bulk writers against one 4M-row table.** They serialise
+  behind each other and autovacuum, turning minutes into hours. Batch the
+  post-load phase into a single pass.
+- **A monitor that full-scans the table it monitors starves the pipeline.**
+  Back off polling when a bulk write is running.

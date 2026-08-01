@@ -11,12 +11,27 @@ Two anchors constrain every candidate:
 Corrections outside the bound are recorded as 'unverified' rather than applied,
 so nothing is silently moved to the wrong side of the country.
 """
-import os, re, unicodedata, collections, statistics
+import os
+from pathlib import Path
+import re, unicodedata, collections, statistics
 import psycopg
 
-DSN = os.environ.get("LOCZ_DSN",
-                     "host=127.0.0.1 port=5433 dbname=locz_engine user=postgres "
-                     "password=LocZEngine_2026!")
+def _dsn():
+    """Connection string comes from the environment. No default: a hardcoded
+    fallback password ends up in version control, which is how this file used to
+    leak one to a public repository."""
+    v = os.environ.get("LOCZ_DSN")
+    if not v:
+        env = Path(__file__).resolve().parents[1] / ".env"
+        if env.exists():
+            for line in env.read_text(encoding="utf-8").splitlines():
+                if line.startswith("LOCZ_DSN="):
+                    return line.split("=", 1)[1].strip()
+        raise SystemExit("LOCZ_DSN is not set. Copy .env.example to .env and fill it in.")
+    return v
+
+
+DSN = _dsn()
 MAX_MOVE_KM = 60.0          # observed GeoNames error tops out near 100 km; 60 is safe
 DISTRICT_RADIUS_KM = 120.0  # a candidate must sit inside its own district's neighbourhood
 

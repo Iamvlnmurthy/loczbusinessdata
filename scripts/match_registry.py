@@ -8,16 +8,39 @@ Driven from the business side (~200k Telangana rows) rather than the register si
 side. Same join, opposite direction, a fraction of the work.
 
 Deliberately conservative. A false verification is worse than no verification: it
-tells a user the state vouched for a business when it did not. So a match needs
-name similarity above 0.62 AND the same district, and only the single best
-candidate is taken.
+tells a user the state vouched for a business when it did not.
+
+Matching is on EXACT normalised name within the same district, not fuzzy
+similarity. The first attempt used trigram similarity and spilled 15 GB of temp
+in seven minutes: Hyderabad district alone holds 1.86M register entries, so every
+business there scanned an enormous candidate set and sorted all of it. Exact
+equality is a hash join — seconds instead of hours — and it trades recall for
+precision, which is the right trade when the output is a verification claim.
+
+Both sides are normalised the same way (lowercase, punctuation stripped, and the
+noise words Indian business names repeat: sri, shri, new, m/s, pvt, ltd).
 """
-import os, re, sys
+import os
+from pathlib import Path
+import re, sys
 import psycopg
 
-DSN = os.environ.get("LOCZ_DSN",
-                     "host=127.0.0.1 port=5433 dbname=locz_engine user=postgres "
-                     "password=LocZEngine_2026!")
+def _dsn():
+    """Connection string comes from the environment. No default: a hardcoded
+    fallback password ends up in version control, which is how this file used to
+    leak one to a public repository."""
+    v = os.environ.get("LOCZ_DSN")
+    if not v:
+        env = Path(__file__).resolve().parents[1] / ".env"
+        if env.exists():
+            for line in env.read_text(encoding="utf-8").splitlines():
+                if line.startswith("LOCZ_DSN="):
+                    return line.split("=", 1)[1].strip()
+        raise SystemExit("LOCZ_DSN is not set. Copy .env.example to .env and fill it in.")
+    return v
+
+
+DSN = _dsn()
 SIM = 0.62
 
 
@@ -25,7 +48,7 @@ def main():
     conn = psycopg.connect(DSN, autocommit=True)
     cur = conn.cursor()
     cur.execute("SET statement_timeout = '90min'")
-    cur.execute("SET pg_trgm.similarity_threshold = %s", (SIM,))
+    cur.execute(f"SET pg_trgm.similarity_threshold = {SIM}")
 
     cur.execute("""ALTER TABLE businesses
                      ADD COLUMN IF NOT EXISTS registry_match_id bigint,
@@ -53,22 +76,23 @@ def main():
     cur.execute("SELECT count(*) FROM registry_entries")
     print(f"register entries            : {cur.fetchone()[0]:,}")
 
-    print("matching (best candidate per business) …", flush=True)
-    cur.execute(f"""
+    print("indexing register for exact match …", flush=True)
+    cur.execute("""CREATE INDEX IF NOT EXISTS reg_exact
+                   ON registry_entries (lower(district), canonical_name)""")
+    cur.execute("ANALYZE registry_entries")
+
+    print("matching on exact normalised name + district …", flush=True)
+    cur.execute("""
       DROP TABLE IF EXISTS reg_match;
       CREATE TABLE reg_match AS
-      SELECT t.id AS business_id, m.rid, m.nature, m.score
+      SELECT DISTINCT ON (t.id) t.id AS business_id, r.id AS rid, r.nature,
+             1.00::numeric AS score
       FROM tg_biz t
-      CROSS JOIN LATERAL (
-        SELECT r.id AS rid, r.nature,
-               similarity(r.canonical_name, t.canonical_name) AS score
-        FROM registry_entries r
-        WHERE lower(r.district) = t.district
-          AND r.canonical_name %% t.canonical_name
-        ORDER BY similarity(r.canonical_name, t.canonical_name) DESC
-        LIMIT 1
-      ) m
-      WHERE m.score >= {SIM}""")
+      JOIN registry_entries r
+        ON lower(r.district) = t.district
+       AND r.canonical_name = t.canonical_name
+      WHERE length(t.canonical_name) >= 8      -- a 2-3 letter name is not evidence
+      ORDER BY t.id, r.id""")
     cur.execute("SELECT count(*) FROM reg_match")
     n_match = cur.fetchone()[0]
     print(f"matched                     : {n_match:,}  ({n_match/max(n_biz,1)*100:.1f}% of mapped)")

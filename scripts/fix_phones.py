@@ -10,12 +10,27 @@ A number that is not the business's own contact is worse than no number: the use
 calls and reaches someone who cannot help. Both classes are demoted, not deleted -
 the original value stays in provenance.
 """
-import os, re
+import os
+from pathlib import Path
+import re
 import psycopg
 
-DSN = os.environ.get("LOCZ_DSN",
-                     "host=127.0.0.1 port=5433 dbname=locz_engine user=postgres "
-                     "password=LocZEngine_2026!")
+def _dsn():
+    """Connection string comes from the environment. No default: a hardcoded
+    fallback password ends up in version control, which is how this file used to
+    leak one to a public repository."""
+    v = os.environ.get("LOCZ_DSN")
+    if not v:
+        env = Path(__file__).resolve().parents[1] / ".env"
+        if env.exists():
+            for line in env.read_text(encoding="utf-8").splitlines():
+                if line.startswith("LOCZ_DSN="):
+                    return line.split("=", 1)[1].strip()
+        raise SystemExit("LOCZ_DSN is not set. Copy .env.example to .env and fill it in.")
+    return v
+
+
+DSN = _dsn()
 SHARE_LIMIT = 3          # a genuine shop line may cover a couple of branches, not more
 
 DDL = """

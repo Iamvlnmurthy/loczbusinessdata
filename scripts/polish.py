@@ -1,5 +1,8 @@
 """Final corrections that keyword rules cannot express.
 
+NOTE: Postgres POSIX regex uses \y for a word boundary.  means backspace, so
+every rule below silently matched nothing until this was fixed.
+
 Three fixes, each from a specific observation rather than a general rule:
 
   1. Tent houses are event-rental businesses (tents, chairs, wedding decor).
@@ -18,28 +21,42 @@ Three fixes, each from a specific observation rather than a general rule:
      be signed that way - but they should not be the first result a user sees.
 """
 import os
+from pathlib import Path
 import psycopg
 
-DSN = os.environ.get("LOCZ_DSN",
-                     "host=127.0.0.1 port=5433 dbname=locz_engine user=postgres "
-                     "password=LocZEngine_2026!")
+def _dsn():
+    """Connection string comes from the environment. No default: a hardcoded
+    fallback password ends up in version control, which is how this file used to
+    leak one to a public repository."""
+    v = os.environ.get("LOCZ_DSN")
+    if not v:
+        env = Path(__file__).resolve().parents[1] / ".env"
+        if env.exists():
+            for line in env.read_text(encoding="utf-8").splitlines():
+                if line.startswith("LOCZ_DSN="):
+                    return line.split("=", 1)[1].strip()
+        raise SystemExit("LOCZ_DSN is not set. Copy .env.example to .env and fill it in.")
+    return v
+
+
+DSN = _dsn()
 
 NAME_RULES = [
     # (regex, category slug, subcategory, business_type)
-    (r"\b(tent house|tent works|tents? (and|&) )", "event-services", "tent-house", "SERVICE_PROVIDER"),
-    (r"\b(decorat(ors?|ion)|mandap|shamiana)\b", "event-services", "decorators", "SERVICE_PROVIDER"),
-    (r"\b(function hall|kalyana ?mandap|convention)\b", "event-services", "function-hall", "HOSPITALITY"),
-    (r"\b(xerox|photostat)\b", "printing-and-stationery", "photocopy", "SERVICE_PROVIDER"),
-    (r"\b(tiffin ?cent|mess)\b", "restaurants-and-food", "tiffin-centre", "FOOD_SERVICE"),
-    (r"\b(kirana|provision ?stores?)\b", "grocery-and-kirana", "kirana-store", "RETAIL_STORE"),
-    (r"\b(pan ?shop|paan ?shop)\b", "grocery-and-kirana", "pan-shop", "RETAIL_STORE"),
+    (r"\y(tent house|tent works|tents? (and|&) )", "event-services", "tent-house", "SERVICE_PROVIDER"),
+    (r"\y(decorat(ors?|ion)|mandap|shamiana)\y", "event-services", "decorators", "SERVICE_PROVIDER"),
+    (r"\y(function hall|kalyana ?mandap|convention)\y", "event-services", "function-hall", "HOSPITALITY"),
+    (r"\y(xerox|photostat)\y", "printing-and-stationery", "photocopy", "SERVICE_PROVIDER"),
+    (r"\y(tiffin ?cent|mess)\y", "restaurants-and-food", "tiffin-centre", "FOOD_SERVICE"),
+    (r"\y(kirana|provision ?stores?)\y", "grocery-and-kirana", "kirana-store", "RETAIL_STORE"),
+    (r"\y(pan ?shop|paan ?shop)\y", "grocery-and-kirana", "pan-shop", "RETAIL_STORE"),
 ]
 
 UTILITY_CATEGORIES = ("professional-services",)
-UTILITY_NAME = (r"\b(state bank|sbi|hdfc bank|icici bank|axis bank|canara bank|"
+UTILITY_NAME = (r"\y(state bank|sbi|hdfc bank|icici bank|axis bank|canara bank|"
                 r"union bank|bank of (baroda|india|maharashtra)|punjab national|"
                 r"indian bank|central bank of india|uco bank|idbi|kotak mahindra bank|"
-                r"post ?office|atm)\b")
+                r"post ?office|atm)\y")
 
 GENERIC_NAMES = (r"^(medical|medicals|hotel|restaurant|general ?store|kirana|"
                  r"shop|store|bakery|salon|clinic|hospital|school|pharmacy|"
