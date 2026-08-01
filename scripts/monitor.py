@@ -54,6 +54,18 @@ STATS_SQL = {
                       GROUP BY 1 ORDER BY 2 DESC""",
 }
 
+# Work that runs after the bulk load: identity, recovery, enrichment. Each is a
+# separate optional query because the table it reads may not exist yet.
+PROGRESS = [
+    ("LocZ ids minted",       "SELECT count(locz_id) FROM businesses"),
+    ("field provenance rows", "SELECT count(*) FROM business_field_sources"),
+    ("enriched from website", "SELECT count(*) FROM business_field_sources WHERE licence_name='first-party-website'"),
+    ("review queue pending",  "SELECT count(*) FROM review_queue WHERE status='pending'"),
+    ("leads created",         "SELECT count(*) FROM business_leads"),
+    ("exports written",       "SELECT count(*) FROM exports WHERE status='complete'"),
+    ("with opening hours",    "SELECT count(*) FROM businesses WHERE opening_hours_raw IS NOT NULL"),
+]
+
 # Overture ingestion progress. Reported per phase because the dedup join is the
 # long pole and a single percentage would hide where the time actually goes.
 OVERTURE_TOTAL = 4_489_484
@@ -88,6 +100,15 @@ def poll():
                 cur.execute(STATS_SQL["centroids"]); snap["centroids"] = cur.fetchall()
                 cur.execute(STATS_SQL["lines"]);     snap["lines"] = cur.fetchall()
                 cur.execute(STATS_SQL["phonestatus"]); snap["phonestatus"] = cur.fetchall()
+                prog = []
+                for label, sql in PROGRESS:
+                    try:
+                        with c.transaction():        # savepoint: a missing table
+                            cur.execute(sql)         # must not abort the outer work
+                            prog.append([label, cur.fetchone()[0]])
+                    except Exception:
+                        prog.append([label, 0])
+                snap["progress"] = prog
                 try:
                     cur.execute(OV_SQL)
                     staged, dups, ins = cur.fetchone()
@@ -123,6 +144,20 @@ def poll():
                              "hot": (time.time() - st.st_mtime) < 25})
         snap["jobs"] = jobs
 
+        # A monitor that slows the pipeline is worse than no monitor. When a bulk
+        # write is running, poll slowly and skip the expensive queries entirely.
+        busy = False
+        try:
+            with psycopg.connect(DSN, connect_timeout=5) as c:
+                busy = c.execute("""SELECT count(*) FROM pg_stat_activity
+                                    WHERE datname='locz_engine' AND state='active'
+                                      AND pid<>pg_backend_pid()
+                                      AND query ~* '(update|insert into) businesses'"""
+                                 ).fetchone()[0] > 0
+        except Exception:
+            pass
+        snap["busy"] = busy
+
         now = time.time()
         with _lock:
             n = snap.get("total")
@@ -137,7 +172,7 @@ def poll():
             _state["last"] = now
             if n is not None:
                 last_n = n
-        time.sleep(4)
+        time.sleep(20 if busy else 5)
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -160,6 +195,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
+            # the page changes as panels are added; a cached copy silently hides them
+            self.send_header("Cache-Control", "no-store, must-revalidate")
             self.end_headers()
             self.wfile.write(body)
             return
@@ -185,8 +222,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                              b.pincode_method::text, b.business_type, b.location_accuracy
                       FROM businesses b LEFT JOIN categories c ON c.id=b.category_id
                       WHERE {' AND '.join(where)}
-                      ORDER BY b.tier, b.completeness_score DESC, b.confidence_score DESC
-                      LIMIT 120"""
+                      ORDER BY b.updated_at DESC
+                      LIMIT 60"""
             try:
                 with psycopg.connect(DSN, connect_timeout=5) as conn:
                     cur = conn.cursor()

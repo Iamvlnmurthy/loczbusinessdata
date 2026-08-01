@@ -180,6 +180,8 @@ main>*{min-width:0}
     <section class="panel">
       <div class="phead"><h2>Sources loaded</h2><span class="hint">rows in the canonical table</span></div>
       <div class="cov" id="sources"></div>
+      <div class="phead" style="border-top:1px solid var(--line)"><h2>Post-load work</h2><span class="hint">identity · recovery · enrichment</span></div>
+      <div class="cov" id="progress"></div>
     </section>
   </div>
 
@@ -313,6 +315,7 @@ async function tick(){
       '<span class="v">'+j.mb+' MB'+(j.hot?" \u25b2":"")+'</span></div>';}).join("")
       ||'<div class="empty">no pipeline files yet</div>';
   bars("#sources",(s.sources||[]),s.total);
+  bars("#progress",(s.progress||[]),null);
   bars("#methods",(s.methods||[]).map(function(r){return [r[0],r[1],"conf "+r[2]]}),s.total);
   bars("#centroids",(s.centroids||[]),19238);
   bars("#lines",(s.lines||[]).map(function(r){
