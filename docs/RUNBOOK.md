@@ -150,3 +150,44 @@ argument for `tests/test_compliance.py` growing every time something slips.
   post-load phase into a single pass.
 - **A monitor that full-scans the table it monitors starves the pipeline.**
   Back off polling when a bulk write is running.
+
+---
+
+# Phase 2 — UDYAM MSME register (not yet run)
+
+`scripts/load_udyam.py` is written, tested on 60k records, and **deliberately not
+run to completion**. Run it on the phase-2 machine.
+
+```bash
+# .env needs DATA_GOV_KEY (free, from data.gov.in → My Account)
+python scripts/load_udyam.py                    # all 42.5M
+python scripts/load_udyam.py --states TELANGANA "ANDHRA PRADESH"   # launch states first
+```
+
+**Scale:** 42,531,970 records at 10,000/request = ~4,254 requests. Measured
+throughput on the test: ~670 records/second, so roughly **18 hours** for the full
+set, or minutes for a single state. It is resumable — it counts what is already
+loaded and continues from that offset.
+
+**Why it is not loaded as listings.** No coordinates, so it cannot be deduplicated
+by distance, and name-only matching is what moved a pincode 2,659 km earlier in
+this project. It lands in `registry_entries`.
+
+**But it carries a pincode**, which Telangana's registers did not. That makes it
+the first registry that can be matched on name + pincode rather than name +
+district, and the first that supports gap analysis at the unit this engine
+actually tracks. Telangana's mandal-level gap analysis failed precisely because
+the area names did not align; pincode removes that problem.
+
+**Privacy.** `CommunicationAddress` for a micro-enterprise is frequently the
+proprietor's home. Rows matching residential patterns are flagged
+`home_address_suspected` in `extra` — 8.5% of the test sample. Those must not be
+published without consent. No proprietor name appears in the feed, which is what
+makes this dataset usable at all.
+
+**Correction to an earlier finding.** `docs/SOURCE-REGISTER.md` records Udyam as
+"not obtainable — no bulk file, captcha-gated, personal data". That is true of
+`udyamregistration.gov.in`, the registration portal. It is **wrong** about
+data.gov.in, which publishes the same register as an open dataset under GODL-India
+with a documented API. Check the open-data catalogue before concluding a
+government dataset is unreachable.
